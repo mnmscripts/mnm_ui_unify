@@ -14,4 +14,6 @@ Syncs UI files easily across characters. Maintains backups of all of your settin
 ## Windows
 Install a current version of python, example (for Intel/AMD): https://www.python.org/ftp/python/3.14.0/python-3.14.0-amd64.exe
 
-Download the .py script above, double click to run. You can also run powershell and ```python3 c:\path\to\script\mnm_ui_unify.py```
+Click the .py script link above, then click the download link near the top right of the page (arrow icon). Double click to run. 
+
+You can also run it with Windows Powershell ```python3 c:\path\to\script\mnm_ui_unify.py```

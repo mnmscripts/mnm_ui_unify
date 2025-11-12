@@ -2,7 +2,7 @@
 
 Sync your UI files easy from one character to others.
 
-![image](https://media.discordapp.net/attachments/1428257116233269369/1438075901765222410/mnmunify.jpg?ex=6915900d&is=69143e8d&hm=daf824770b9bc091ddc64a978d014f86a8a976c4a275bb851f63665ac6eaa270&=&format=webp&width=803&height=1293)
+![image](https://media.discordapp.net/attachments/1428257116233269369/1438077226821222450/mnmunify.jpg?ex=69159149&is=69143fc9&hm=d3634940ed127fe433f956a00092051689c80cf4e437ffe7f45273af646021a4&=&format=webp)
 
 Other features:
 -Backs up all of your settings frequently.

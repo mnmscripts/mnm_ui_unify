@@ -4,12 +4,10 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-# Hide console window on Windows
-if os.name == 'nt':  # Windows
+# hide console window
+if os.name == 'nt':
     import ctypes
-    ctypes.windll.user32.ShowWindow(
-        ctypes.windll.kernel32.GetConsoleWindow(), 0
-    )
+    ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
 
 class WindowManager:
     def __init__(self, root):
@@ -29,49 +27,71 @@ class WindowManager:
         self.root.rowconfigure(0, weight=1)
 
     def check_backup(self):
-        parent_dir = os.path.dirname(self.appdata_path)
-        backups = [d for d in os.listdir(parent_dir) 
-                  if d.startswith("Monsters and Memories.backup.") and os.path.isdir(os.path.join(parent_dir, d))]
+        backups = self.get_backups()
+        recent_backup = self.get_recent_backup(backups)
         
-        recent_backup = None
-        for backup in backups:
-            try:
-                backup_date = datetime.strptime(backup.replace("Monsters and Memories.backup.", ""), "%Y%m%d")
-                if recent_backup is None or backup_date > recent_backup:
-                    recent_backup = backup_date
-            except ValueError: continue
+        # Warn if directory is over 1GB
+        dir_size = self.get_directory_size(self.appdata_path)
+        if dir_size > 1024**3:
+            messagebox.showwarning("Large Directory Warning", 
+                                 f"Your settings directory is very large ({self.format_bytes(dir_size)}).\n"
+                                 "This is not normal. A Log file is most likely the culprit.")
         
         if recent_backup is None or (datetime.now() - recent_backup).days > 7:
-            backup_path = f"{parent_dir}/Monsters and Memories.backup.{datetime.now().strftime('%Y%m%d')}"
+            backup_path = self.generate_unique_backup_path()
             if messagebox.askyesno("Backup Needed", f"No recent backup found. Create backup?\n\n{backup_path}"):
                 self.create_backup(backup_path)
 
+    def get_backups(self):
+        parent_dir = os.path.dirname(self.appdata_path)
+        return [d for d in os.listdir(parent_dir) 
+                if d.startswith("Monsters and Memories.backup.") and os.path.isdir(os.path.join(parent_dir, d))]
+
+    def get_recent_backup(self, backups):
+        recent_backup = None
+        for backup in backups:
+            try:
+                date_part = backup.split('.')[2]  # Extract YYYYMMDD
+                backup_date = datetime.strptime(date_part, "%Y%m%d")
+                if recent_backup is None or backup_date > recent_backup:
+                    recent_backup = backup_date
+            except (ValueError, IndexError): continue
+        return recent_backup
+
+    def generate_unique_backup_path(self):
+        parent_dir = os.path.dirname(self.appdata_path)
+        timestamp = datetime.now().strftime('%Y%m%d.%H%M%S')
+        base_name = f"Monsters and Memories.backup.{timestamp}"
+        backup_path = os.path.join(parent_dir, base_name)
+        
+        # Add counter if path exists
+        counter = 1
+        original_backup_path = backup_path
+        while os.path.exists(backup_path):
+            backup_path = f"{original_backup_path}.{counter}"
+            counter += 1
+        return backup_path
+
     def get_directory_size(self, path):
-        """Calculate the total size of a directory in bytes"""
         total_size = 0
         try:
-            for dirpath, dirnames, filenames in os.walk(path):
+            for dirpath, _, filenames in os.walk(path):
                 for filename in filenames:
                     filepath = os.path.join(dirpath, filename)
                     try:
                         total_size += os.path.getsize(filepath)
                     except (OSError, FileNotFoundError):
-                        # Skip files that can't be accessed
                         continue
         except Exception:
             pass
         return total_size
 
     def format_bytes(self, bytes_value):
-        """Convert bytes to human-readable format"""
-        if bytes_value < 1024:
-            return f"{bytes_value} B"
-        elif bytes_value < 1024**2:
-            return f"{bytes_value / 1024:.1f} KB"
-        elif bytes_value < 1024**3:
-            return f"{bytes_value / (1024**2):.1f} MB"
-        else:
-            return f"{bytes_value / (1024**3):.1f} GB"
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if bytes_value < 1024:
+                return f"{bytes_value:.1f} {unit}"
+            bytes_value /= 1024
+        return f"{bytes_value:.1f} TB"
 
     def create_backup(self, backup_path):
         try:
@@ -81,18 +101,7 @@ class WindowManager:
             messagebox.showerror("Backup Failed", f"Failed to create backup:\n{str(e)}")
 
     def get_backup_age(self):
-        parent_dir = os.path.dirname(self.appdata_path)
-        backups = [d for d in os.listdir(parent_dir) 
-                  if d.startswith("Monsters and Memories.backup.") and os.path.isdir(os.path.join(parent_dir, d))]
-        
-        recent_backup = None
-        for backup in backups:
-            try:
-                backup_date = datetime.strptime(backup.replace("Monsters and Memories.backup.", ""), "%Y%m%d")
-                if recent_backup is None or backup_date > recent_backup:
-                    recent_backup = backup_date
-            except ValueError: continue
-        
+        recent_backup = self.get_recent_backup(self.get_backups())
         if recent_backup:
             days_old = (datetime.now() - recent_backup).days
             return f" ({days_old} day{'s' if days_old != 1 else ''} old)"
@@ -102,13 +111,12 @@ class WindowManager:
         main = ttk.Frame(self.root, padding="10")
         main.grid(sticky="NSEW", row=0, column=0)
         main.columnconfigure(0, weight=1)
-        main.rowconfigure(4, weight=1)  # Higher weight for treeview row
+        main.rowconfigure(4, weight=1)
 
         ttk.Label(main, text="Unifies UI settings from one character to your other characters", 
                  font=("TkDefaultFont", 10, "bold")).grid(row=0, sticky="EW", pady=(0, 10))
         ttk.Label(main, text="Select source (green), destinations (blue), then copy").grid(row=1, sticky="EW", pady=(0, 10))
         
-        # Checkboxes for files to copy
         file_frame = ttk.Frame(main)
         file_frame.grid(row=2, sticky="EW", pady=(0, 10))
         self.windows_var = tk.BooleanVar(value=True)
@@ -127,24 +135,20 @@ class WindowManager:
         self.tree = ttk.Treeview(tree_frame, columns=('server', 'char'), show='headings', height=12)
         self.tree.heading('server', text='Server')
         self.tree.heading('char', text='Character')
-        self.tree.column('server', width=150)  # Reduced width
-        self.tree.column('char', width=250)    # Reduced width to fit window
-        # Configure the columns to be responsive
+        self.tree.column('server', width=150)
+        self.tree.column('char', width=250)
         self.tree.column('server', stretch=tk.YES)
         self.tree.column('char', stretch=tk.YES)
-        
-        style = ttk.Style()
-        style.map("Treeview", background=[('selected', 'white')], foreground=[('selected', 'black')])
-        
-        scroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        self.tree.configure(yscroll=scroll.set)
-        self.tree.grid(row=0, column=0, sticky="NSEW")
-        scroll.grid(row=0, column=1, sticky="NS")
         
         self.tree.tag_configure('source', background='lightgreen')
         self.tree.tag_configure('dest', background='lightblue')
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
 
+        scroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscroll=scroll.set)
+        self.tree.grid(row=0, column=0, sticky="NSEW")
+        scroll.grid(row=0, column=1, sticky="NS")
+        
         btn_frame = ttk.Frame(main)
         btn_frame.grid(row=5, pady=15, sticky="EW")
         ttk.Button(btn_frame, text="Refresh", command=self.scan_characters).pack(side=tk.LEFT, padx=(0, 10))
@@ -158,13 +162,17 @@ class WindowManager:
         self.status.grid(row=6, sticky="EW", pady=(10, 0))
 
     def manual_backup(self):
-        backup_path = f"{os.path.dirname(self.appdata_path)}/Monsters and Memories.backup.{datetime.now().strftime('%Y%m%d')}"
-        
-        # Calculate directory size
+        backup_path = self.generate_unique_backup_path()
         dir_size = self.get_directory_size(self.appdata_path)
         size_str = self.format_bytes(dir_size)
         
-        if messagebox.askyesno("Confirm Backup", f"Directory size: {size_str}\n\nCreate backup at:\n{backup_path}"):
+        if dir_size > 1024**3:  # 1GB
+            if not messagebox.askyesno("Large Directory Warning", 
+                                     f"Directory is {size_str}. This is not normal.\n\n"
+                                     f"Create backup at:\n{backup_path}\n\nProceed?"):
+                return
+        
+        if messagebox.askyesno("Confirm Backup", f"Size: {size_str}\n\nCreate backup at:\n{backup_path}"):
             self.create_backup(backup_path)
             self.backup_button.config(text="Backup Now" + self.get_backup_age())
 
@@ -196,18 +204,11 @@ class WindowManager:
             self.source_item = selected
             self.tree.item(self.source_item, tags=('source',))
         elif self.source_item == selected:
-            # Unselect source and clear destinations
-            self.tree.item(self.source_item, tags=())
-            self.source_item = None
-            for item in self.dest_items:
-                self.tree.item(item, tags=())
-            self.dest_items = []
+            self.reset_selection()
         elif selected in self.dest_items:
-            # Remove from destinations
             self.dest_items.remove(selected)
             self.tree.item(selected, tags=())
         else:
-            # Add to destinations
             self.dest_items.append(selected)
             self.tree.item(selected, tags=('dest',))
         
@@ -252,48 +253,24 @@ class WindowManager:
         source_path = self.tree.item(self.source_item, 'values')
         full_source_path = os.path.join(self.appdata_path, source_path[0], source_path[1])
         
-        # Check if source files exist
         files_to_copy = []
-        if self.windows_var.get():
-            windows_file = os.path.join(full_source_path, "windows.json")
-            if os.path.exists(windows_file):
-                files_to_copy.append("windows.json")
-            else:
-                messagebox.showerror("Error", f"No windows.json in source: {full_source_path}")
-                return
-        
-        if self.chats_var.get():
-            chats_file = os.path.join(full_source_path, "chats.json")
-            if os.path.exists(chats_file):
-                files_to_copy.append("chats.json")
-            else:
-                messagebox.showerror("Error", f"No chats.json in source: {full_source_path}")
-                return
+        for filename in ["windows.json", "chats.json"]:
+            var = getattr(self, f"{filename.split('.')[0]}_var")
+            if var.get():
+                if os.path.exists(os.path.join(full_source_path, filename)):
+                    files_to_copy.append(filename)
+                else:
+                    messagebox.showerror("Error", f"No {filename} in source: {full_source_path}")
+                    return
         
         if not files_to_copy:
             messagebox.showerror("Error", "No files to copy")
             return
 
-        # Determine which files are being copied for the confirmation message
-        files_description = []
-        if "windows.json" in files_to_copy:
-            files_description.append("windows.json")
-        if "chats.json" in files_to_copy:
-            files_description.append("chats.json")
-        
-        # Get destination character names
         dest_chars = [self.tree.item(item, 'values')[1] for item in self.dest_items]
+        files_str = " and ".join(files_to_copy)
+        confirmation_msg = f"Copy {files_str}?\n\nFrom: {source_path[1]}\nTo: {', '.join(dest_chars)}"
         
-        # Create the confirmation message
-        files_str = " and ".join(files_description)
-        if len(files_description) == 1:
-            confirmation_msg = f"Copy {files_str}?"
-        else:
-            confirmation_msg = f"Copy {files_str}?"
-        
-        confirmation_msg += f"\n\nFrom: {source_path[1]}\nTo: {', '.join(dest_chars)}"
-        
-        # Show confirmation dialog
         if not messagebox.askyesno("Confirm Copy", confirmation_msg):
             return
         
@@ -308,7 +285,7 @@ class WindowManager:
                 try:
                     shutil.copy2(source_file, dest_file)
                 except Exception as e:
-                    messagebox.showerror("Error", f"Failed to copy {filename} to {full_dest_path}: {str(e)}")
+                    messagebox.showerror("Error", f"Failed to copy {filename}: {str(e)}")
                     return
             success_count += 1
         

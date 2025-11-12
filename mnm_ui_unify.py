@@ -41,12 +41,13 @@ class WindowManager:
 
     def check_bloated_directory(self, backup_path=None):
         dir_size = self.get_directory_size(self.appdata_path)
-        if dir_size < 0:  # 1 GB
+        if dir_size < 1024**3:  # 1 GB
             return True
 
         msg = f"Your settings directory is very large ({self.format_bytes(dir_size)}).\n" \
-              "This is not normal — a log file is likely the culprit."
-        return messagebox.askyesno("Large Directory – Continue?", msg)
+              "This is not normal — a log file is likely the culprit.\n" \
+              "Continue with backup?"
+        return messagebox.askyesno("Large Directory Warning", msg)
 
     def check_backup(self):
         backups = self.get_backups()

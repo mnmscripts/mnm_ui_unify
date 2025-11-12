@@ -37,7 +37,7 @@ class WindowManager:
                                  f"Your settings directory is very large ({self.format_bytes(dir_size)}).\n"
                                  "This is not normal. A Log file is most likely the culprit.")
         
-        if recent_backup is None or (datetime.now() - recent_backup).days > 7:
+        if recent_backup is None or (datetime.now() - recent_backup).days > 1:
             backup_path = self.generate_unique_backup_path()
             if messagebox.askyesno("Backup Needed", f"No recent backup found. Create backup?\n\n{backup_path}"):
                 self.create_backup(backup_path)

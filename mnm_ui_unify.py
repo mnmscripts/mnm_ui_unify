@@ -249,7 +249,7 @@ class WindowManager:
 
     def is_file_in_use(self, filepath):
         try:
-            # Try to open the file in ro
+            # Try to open the file in rw mode
             with open(filepath, 'r+b'):
                 pass
             return False

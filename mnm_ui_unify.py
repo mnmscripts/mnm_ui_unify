@@ -32,8 +32,7 @@ class WindowManager:
         base_name = f"Monsters and Memories.backup.{timestamp}"
         backup_path = os.path.join(parent_dir, base_name)
         
-        # Add counter if path exists
-        counter = 1
+        counter = 1 # Add counter if path exists
         original_backup_path = backup_path
         while os.path.exists(backup_path):
             backup_path = f"{original_backup_path}.{counter}"
@@ -46,12 +45,10 @@ class WindowManager:
             messagebox.showwarning("Large Directory Warning", 
                                  f"Your settings directory is very large ({self.format_bytes(dir_size)}).\n"
                                  "This is not normal. A Log file is most likely the culprit.")
-            if backup_path:
-                if not messagebox.askyesno("Large Directory Warning", 
+            if backup_path and not messagebox.askyesno("Large Directory Warning", 
                                          f"Directory is {self.format_bytes(dir_size)}. This is not normal.\n\n"
                                          f"Create backup at:\n{backup_path}\n\nProceed?"):
-                    return False
-        
+                return False
         return True
 
     def check_backup(self):
@@ -86,10 +83,9 @@ class WindowManager:
             for dirpath, _, filenames in os.walk(path):
                 for filename in filenames:
                     filepath = os.path.join(dirpath, filename)
-                    try:
-                        total_size += os.path.getsize(filepath)
-                    except (OSError, FileNotFoundError):
-                        continue
+                    total_size += os.path.getsize(filepath)
+        except (OSError, FileNotFoundError):
+            pass
         except Exception:
             pass
         return total_size
@@ -251,6 +247,15 @@ class WindowManager:
         self.selection_label.config(text=text)
         self.copy_button.config(state=tk.NORMAL if self.source_item and self.dest_items else tk.DISABLED)
 
+    def is_file_in_use(self, filepath):
+        try:
+            # Try to open the file in ro
+            with open(filepath, 'r+b'):
+                pass
+            return False
+        except (OSError, PermissionError):
+            return True
+
     def copy_ui_files(self):
         if not self.source_item or not self.dest_items:
             messagebox.showwarning("Warning", "Select source and destinations")
@@ -263,7 +268,12 @@ class WindowManager:
         for filename in ["windows.json", "chats.json"]:
             var = getattr(self, f"{filename.split('.')[0]}_var")
             if var.get():
-                if os.path.exists(os.path.join(full_source_path, filename)):
+                source_file = os.path.join(full_source_path, filename)
+                if os.path.exists(source_file):
+                    # Check if source file is in use
+                    if self.is_file_in_use(source_file):
+                        messagebox.showerror("Error", f"Source file is in use: {source_file}")
+                        return
                     files_to_copy.append(filename)
                 else:
                     messagebox.showerror("Error", f"No {filename} in source: {full_source_path}")
@@ -288,6 +298,12 @@ class WindowManager:
             for filename in files_to_copy:
                 source_file = os.path.join(full_source_path, filename)
                 dest_file = os.path.join(full_dest_path, filename)
+                
+                # Check if destination file is in use
+                if os.path.exists(dest_file) and self.is_file_in_use(dest_file):
+                    messagebox.showerror("Error", f"Destination file is in use: {dest_file}")
+                    return
+                
                 try:
                     shutil.copy2(source_file, dest_file)
                 except Exception as e:

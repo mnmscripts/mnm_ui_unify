@@ -16,4 +16,4 @@ Install a current version of python, example (for Intel/AMD): https://www.python
 
 Click the .py script link above, then click the download link near the top right of the page (arrow icon). Double click to run. 
 
-You can also run it with Windows Powershell ```python3 c:\path\to\script\mnm_ui_unify.py```
+You can also run it with Windows Powershell ```python c:\path\to\script\mnm_ui_unify.py```

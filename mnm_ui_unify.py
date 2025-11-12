@@ -26,16 +26,38 @@ class WindowManager:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
 
-    def check_backup(self):
-        backups = self.get_backups()
-        recent_backup = self.get_recent_backup(backups)
+    def generate_unique_backup_path(self):
+        parent_dir = os.path.dirname(self.appdata_path)
+        timestamp = datetime.now().strftime('%Y%m%d.%H%M%S')
+        base_name = f"Monsters and Memories.backup.{timestamp}"
+        backup_path = os.path.join(parent_dir, base_name)
         
-        # Warn if directory is over 1GB
+        # Add counter if path exists
+        counter = 1
+        original_backup_path = backup_path
+        while os.path.exists(backup_path):
+            backup_path = f"{original_backup_path}.{counter}"
+            counter += 1
+        return backup_path
+
+    def check_bloated_directory(self, backup_path=None):      
         dir_size = self.get_directory_size(self.appdata_path)
-        if dir_size > 1024**3:
+        if dir_size > 1024**3: # Warn if directory is over 1GB
             messagebox.showwarning("Large Directory Warning", 
                                  f"Your settings directory is very large ({self.format_bytes(dir_size)}).\n"
                                  "This is not normal. A Log file is most likely the culprit.")
+            if backup_path:
+                if not messagebox.askyesno("Large Directory Warning", 
+                                         f"Directory is {self.format_bytes(dir_size)}. This is not normal.\n\n"
+                                         f"Create backup at:\n{backup_path}\n\nProceed?"):
+                    return False
+        
+        return True
+
+    def check_backup(self):
+        backups = self.get_backups()
+        recent_backup = self.get_recent_backup(backups)
+        self.check_bloated_directory()
         
         if recent_backup is None or (datetime.now() - recent_backup).days > 1:
             backup_path = self.generate_unique_backup_path()
@@ -57,20 +79,6 @@ class WindowManager:
                     recent_backup = backup_date
             except (ValueError, IndexError): continue
         return recent_backup
-
-    def generate_unique_backup_path(self):
-        parent_dir = os.path.dirname(self.appdata_path)
-        timestamp = datetime.now().strftime('%Y%m%d.%H%M%S')
-        base_name = f"Monsters and Memories.backup.{timestamp}"
-        backup_path = os.path.join(parent_dir, base_name)
-        
-        # Add counter if path exists
-        counter = 1
-        original_backup_path = backup_path
-        while os.path.exists(backup_path):
-            backup_path = f"{original_backup_path}.{counter}"
-            counter += 1
-        return backup_path
 
     def get_directory_size(self, path):
         total_size = 0
@@ -163,14 +171,12 @@ class WindowManager:
 
     def manual_backup(self):
         backup_path = self.generate_unique_backup_path()
+        
+        if not self.check_bloated_directory(backup_path):
+            return
+        
         dir_size = self.get_directory_size(self.appdata_path)
         size_str = self.format_bytes(dir_size)
-        
-        if dir_size > 1024**3:  # 1GB
-            if not messagebox.askyesno("Large Directory Warning", 
-                                     f"Directory is {size_str}. This is not normal.\n\n"
-                                     f"Create backup at:\n{backup_path}\n\nProceed?"):
-                return
         
         if messagebox.askyesno("Confirm Backup", f"Size: {size_str}\n\nCreate backup at:\n{backup_path}"):
             self.create_backup(backup_path)

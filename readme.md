@@ -15,6 +15,8 @@
 ## Windows
 Install a current version of python, example (for Intel/AMD): https://www.python.org/ftp/python/3.14.0/python-3.14.0-amd64.exe
 
-Click the .py script link above, then click the download link near the top right of the page (arrow icon). Double click to run. 
+Click the mnm_ui_unify.py script link above. Review the code if necessary. Then click the download link near the top right of the page ![dl img](https://cdn.discordapp.com/attachments/1428257116233269369/1438096987517095976/image.png?ex=6915a3b0&is=69145230&hm=2f84c4de0372b513d6dcde7b004b63af9139a370df6f64714caff747d6f07c84)
 
-You can also run it with Windows Powershell ```python c:\path\to\script\mnm_ui_unify.py```
+Open the file to run it. If it does not open with Python: *right click file*->Open With->Python
+
+You can also run it with Windows Powershell: ```python c:\path\to\script\mnm_ui_unify.py```

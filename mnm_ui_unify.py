@@ -39,7 +39,7 @@ class WindowManager:
         
         if recent_backup is None or (datetime.now() - recent_backup).days > 1:
             backup_path = self.generate_unique_backup_path()
-            if messagebox.askyesno("Backup Needed", f"No recent backup found. Create backup?\n\n{backup_path}"):
+            if messagebox.askyesno("Backup Needed", f"No recent backup found in the past day. Create backup?\n\n{backup_path}"):
                 self.create_backup(backup_path)
 
     def get_backups(self):

@@ -21,7 +21,7 @@ class WindowManager:
         self.scan_characters()
 
     def setup_window(self):
-        self.root.title("M&M - UI Unifier")
+        self.root.title("M&M UI Unifier")
         self.root.geometry("450x700")
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
@@ -39,22 +39,20 @@ class WindowManager:
             counter += 1
         return backup_path
 
-    def check_bloated_directory(self, backup_path=None):      
+    def check_bloated_directory(self, backup_path=None):
         dir_size = self.get_directory_size(self.appdata_path)
-        if dir_size > 1024**3: # Warn if directory is over 1GB
-            messagebox.showwarning("Large Directory Warning", 
-                                 f"Your settings directory is very large ({self.format_bytes(dir_size)}).\n"
-                                 "This is not normal. A Log file is most likely the culprit.")
-            if backup_path and not messagebox.askyesno("Large Directory Warning", 
-                                         f"Directory is {self.format_bytes(dir_size)}. This is not normal.\n\n"
-                                         f"Create backup at:\n{backup_path}\n\nProceed?"):
-                return False
-        return True
+        if dir_size < 0:  # 1 GB
+            return True
+
+        msg = f"Your settings directory is very large ({self.format_bytes(dir_size)}).\n" \
+              "This is not normal — a log file is likely the culprit."
+        return messagebox.askyesno("Large Directory – Continue?", msg)
 
     def check_backup(self):
         backups = self.get_backups()
         recent_backup = self.get_recent_backup(backups)
-        self.check_bloated_directory()
+        if not self.check_bloated_directory():
+            return
         
         if recent_backup is None or (datetime.now() - recent_backup).days > 1:
             backup_path = self.generate_unique_backup_path()
